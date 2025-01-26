@@ -99,17 +99,15 @@ const Index = () => {
   const onEmailSubmit = async (data: z.infer<typeof emailSchema>) => {
     setIsLoading(true);
     try {
-      // First, check if the email exists in the auth system
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
-        filters: {
-          email: data.email
-        }
+      // Check if the email exists using our Edge Function
+      const { data: checkResult, error: checkError } = await supabase.functions.invoke('check-user-exists', {
+        body: { email: data.email }
       });
 
-      if (userError) throw userError;
+      if (checkError) throw checkError;
 
       // If no user found with this email
-      if (!userData || userData.users.length === 0) {
+      if (!checkResult.exists) {
         toast({
           variant: "destructive",
           title: "Email not found",
