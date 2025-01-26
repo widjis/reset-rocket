@@ -93,14 +93,18 @@ const Index = () => {
 
       // If no user found with this email, send verification email
       if (!checkResult.exists) {
-        // Generate verification link
-        const verificationLink = `${window.location.origin}/verify?email=${encodeURIComponent(data.email)}&step=2`;
+        // Generate a random verification token
+        const verificationToken = crypto.randomUUID();
+        
+        // Generate verification link with token
+        const verificationLink = `${window.location.origin}/verify?email=${encodeURIComponent(data.email)}&token=${verificationToken}&step=2`;
         
         // Send verification email using our Edge Function
         const { error: verificationError } = await supabase.functions.invoke('send-verification', {
           body: { 
             email: data.email,
-            verificationLink
+            verificationLink,
+            verificationToken
           }
         });
 

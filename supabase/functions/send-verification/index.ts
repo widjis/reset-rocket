@@ -1,7 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +16,7 @@ const corsHeaders = {
 interface VerificationEmailRequest {
   email: string;
   verificationLink: string;
+  verificationToken: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,10 +26,23 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, verificationLink }: VerificationEmailRequest = await req.json();
+    const { email, verificationLink, verificationToken }: VerificationEmailRequest = await req.json();
 
     console.log("Sending verification email to:", email);
     console.log("Verification link:", verificationLink);
+
+    // Store the verification token in the database
+    const { error: tokenError } = await supabase
+      .from('verification_tokens')
+      .insert([
+        { 
+          email,
+          token: verificationToken,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
+        }
+      ]);
+
+    if (tokenError) throw tokenError;
 
     const emailResponse = await resend.emails.send({
       from: "MTI Account Recovery <onboarding@resend.dev>",
@@ -41,6 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
               Verify Email Address
             </a>
           </div>
+          <p>This verification link will expire in 24 hours.</p>
           <p>If you didn't request this verification, please ignore this email.</p>
           <p>Best regards,<br>PT Merdeka Tsingshan Indonesia Team</p>
         </div>
