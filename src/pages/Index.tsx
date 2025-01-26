@@ -7,10 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "react-router-dom";
 
-// Form schemas for different steps
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
@@ -40,6 +40,19 @@ const Index = () => {
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const verifiedEmail = searchParams.get('verified_email');
+
+  // Effect to handle email verification success
+  useEffect(() => {
+    if (verifiedEmail) {
+      toast({
+        title: "Email Verified",
+        description: "Your email has been verified successfully. You can now proceed with the recovery process.",
+      });
+      setStep(2);
+    }
+  }, [verifiedEmail, toast]);
 
   // Email form
   const emailForm = useForm<z.infer<typeof emailSchema>>({
@@ -102,9 +115,10 @@ const Index = () => {
       
       toast({
         title: "Verification email sent",
-        description: "Please check your email for the verification link.",
+        description: "Please check your email and click the verification link to continue.",
       });
-      setStep(2);
+      // Remove automatic step progression
+      // setStep(2); // This line is removed
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -217,7 +231,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-4">
-      {/* Logo and Company Name */}
       <div className="mb-8 text-center">
         <img 
           src="https://imip.co.id/wp-content/uploads/2024/09/MTI.png" 
