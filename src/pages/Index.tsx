@@ -7,8 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "react-router-dom";
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -36,9 +37,25 @@ const passwordSchema = z.object({
 });
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Handle verified email redirect
+  useEffect(() => {
+    const verifiedEmail = searchParams.get("verified_email");
+    const redirectStep = searchParams.get("step");
+    
+    if (verifiedEmail && redirectStep) {
+      emailForm.setValue("email", verifiedEmail);
+      setStep(parseInt(redirectStep));
+      toast({
+        title: "Email Verified",
+        description: "You can now continue with the account recovery process.",
+      });
+    }
+  }, [searchParams]);
 
   // Email form
   const emailForm = useForm<z.infer<typeof emailSchema>>({
