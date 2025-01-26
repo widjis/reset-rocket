@@ -9,7 +9,65 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      security_questions: {
+        Row: {
+          created_at: string | null
+          id: string
+          question: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          question: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          question?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_security_answers: {
+        Row: {
+          answer: string
+          created_at: string | null
+          id: string
+          question_id: string | null
+          status: Database["public"]["Enums"]["question_status"] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          answer: string
+          created_at?: string | null
+          id?: string
+          question_id?: string | null
+          status?: Database["public"]["Enums"]["question_status"] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          answer?: string
+          created_at?: string | null
+          id?: string
+          question_id?: string | null
+          status?: Database["public"]["Enums"]["question_status"] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_security_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "security_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +76,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      question_status: "pending" | "answered"
     }
     CompositeTypes: {
       [_ in never]: never
