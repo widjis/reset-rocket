@@ -205,11 +205,24 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Account Recovery</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-4">
+      {/* Logo and Company Name */}
+      <div className="mb-8 text-center">
+        <img 
+          src="https://imip.co.id/wp-content/uploads/2024/09/MTI.png" 
+          alt="MTI Logo" 
+          className="h-16 mb-4 mx-auto"
+        />
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">PT Merdeka Tsingshan Indonesia</h1>
+        <p className="text-gray-600">Account Recovery Portal</p>
+      </div>
+
+      <Card className="w-full max-w-md shadow-lg border-0 bg-white/90 backdrop-blur">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center text-gray-800">
+            Account Recovery
+          </CardTitle>
+          <CardDescription className="text-center">
             Step {step} of 5: {
               step === 1 ? "Email Verification" :
               step === 2 ? "WhatsApp Verification" :
@@ -228,15 +241,23 @@ const Index = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel className="text-gray-700">Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your email" {...field} />
+                        <Input 
+                          placeholder="Enter your email" 
+                          className="border-gray-300 focus:border-blue-500" 
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 transition-colors" 
+                  disabled={isLoading}
+                >
                   {isLoading ? "Sending..." : "Send Verification Email"}
                 </Button>
               </form>
@@ -251,15 +272,23 @@ const Index = () => {
                   name="whatsapp"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>WhatsApp Number</FormLabel>
+                      <FormLabel className="text-gray-700">WhatsApp Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your WhatsApp number" {...field} />
+                        <Input 
+                          placeholder="Enter your WhatsApp number" 
+                          className="border-gray-300 focus:border-blue-500"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 transition-colors"
+                  disabled={isLoading}
+                >
                   {isLoading ? "Sending..." : "Send OTP"}
                 </Button>
               </form>
@@ -274,14 +303,19 @@ const Index = () => {
                   name="otp"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Enter OTP</FormLabel>
+                      <FormLabel className="text-gray-700">Enter OTP</FormLabel>
                       <FormControl>
                         <InputOTP
                           maxLength={6}
                           render={({ slots }) => (
-                            <InputOTPGroup>
+                            <InputOTPGroup className="gap-2">
                               {slots.map((slot, index) => (
-                                <InputOTPSlot key={index} {...slot} index={index} />
+                                <InputOTPSlot 
+                                  key={index} 
+                                  {...slot} 
+                                  index={index}
+                                  className="border-gray-300 focus:border-blue-500" 
+                                />
                               ))}
                             </InputOTPGroup>
                           )}
@@ -292,7 +326,11 @@ const Index = () => {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 transition-colors"
+                  disabled={isLoading}
+                >
                   {isLoading ? "Verifying..." : "Verify OTP"}
                 </Button>
               </form>
