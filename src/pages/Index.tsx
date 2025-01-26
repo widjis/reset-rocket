@@ -91,12 +91,24 @@ const Index = () => {
 
       if (checkError) throw checkError;
 
-      // If no user found with this email
+      // If no user found with this email, send verification email
       if (!checkResult.exists) {
+        // Generate verification link
+        const verificationLink = `${window.location.origin}/verify?email=${encodeURIComponent(data.email)}&step=2`;
+        
+        // Send verification email using our Edge Function
+        const { error: verificationError } = await supabase.functions.invoke('send-verification', {
+          body: { 
+            email: data.email,
+            verificationLink
+          }
+        });
+
+        if (verificationError) throw verificationError;
+
         toast({
-          variant: "destructive",
-          title: "Email not found",
-          description: "This email is not registered in our system. Please check the email or contact support.",
+          title: "Verification Email Sent",
+          description: "Please check your email to verify your address and continue with the recovery process.",
         });
         return;
       }
