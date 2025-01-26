@@ -86,8 +86,19 @@ const Index = () => {
   const onEmailSubmit = async (data: z.infer<typeof emailSchema>) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(data.email);
-      if (error) throw error;
+      // First, request password reset from Supabase
+      const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(data.email);
+      if (supabaseError) throw supabaseError;
+
+      // Then, send our custom verification email
+      const { error: verificationError } = await supabase.functions.invoke('send-verification', {
+        body: {
+          email: data.email,
+          verificationLink: `${window.location.origin}/verify?email=${encodeURIComponent(data.email)}`
+        }
+      });
+
+      if (verificationError) throw verificationError;
       
       toast({
         title: "Verification email sent",
