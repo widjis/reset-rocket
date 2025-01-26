@@ -99,11 +99,31 @@ const Index = () => {
   const onEmailSubmit = async (data: z.infer<typeof emailSchema>) => {
     setIsLoading(true);
     try {
-      // First, request password reset from Supabase
+      // First, check if the email exists in the auth system
+      const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
+        filters: {
+          email: data.email
+        }
+      });
+
+      if (userError) throw userError;
+
+      // If no user found with this email
+      if (!userData || userData.users.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Email not found",
+          description: "This email is not registered in our system. Please check the email or contact support.",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // If email exists, proceed with password reset
       const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(data.email);
       if (supabaseError) throw supabaseError;
 
-      // Then, send our custom verification email
+      // Send verification email
       const { error: verificationError } = await supabase.functions.invoke('send-verification', {
         body: {
           email: data.email,
@@ -117,8 +137,6 @@ const Index = () => {
         title: "Verification email sent",
         description: "Please check your email and click the verification link to continue.",
       });
-      // Remove automatic step progression
-      // setStep(2); // This line is removed
     } catch (error: any) {
       toast({
         variant: "destructive",
