@@ -7,22 +7,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, captchaToken } = await req.json()
-    
-    // Verify captcha token
-    const recaptchaResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      body: new URLSearchParams({
-        secret: Deno.env.get('RECAPTCHA_SECRET_KEY') || '',
-        response: captchaToken,
-      }),
-    })
-
-    const recaptchaData = await recaptchaResponse.json()
-    
-    if (!recaptchaData.success) {
-      throw new Error('Invalid captcha')
-    }
+    const { email } = await req.json()
 
     // Create a Supabase client with the service role key
     const supabaseClient = createClient(
