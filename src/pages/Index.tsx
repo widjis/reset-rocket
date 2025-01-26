@@ -7,9 +7,12 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useSearchParams } from "react-router-dom";
+import ReCAPTCHA from "react-google-recaptcha";
+
+// Add reCAPTCHA dependency
+<lov-add-dependency>react-google-recaptcha@latest</lov-add-dependency>
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -40,19 +43,7 @@ const Index = () => {
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [searchParams] = useSearchParams();
-  const verifiedEmail = searchParams.get('verified_email');
-
-  // Effect to handle email verification success
-  useEffect(() => {
-    if (verifiedEmail) {
-      toast({
-        title: "Email Verified",
-        description: "Your email has been verified successfully. You can now proceed with the recovery process.",
-      });
-      setStep(2);
-    }
-  }, [verifiedEmail, toast]);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Email form
   const emailForm = useForm<z.infer<typeof emailSchema>>({
@@ -62,7 +53,6 @@ const Index = () => {
     },
   });
 
-  // WhatsApp form
   const whatsappForm = useForm<z.infer<typeof whatsappSchema>>({
     resolver: zodResolver(whatsappSchema),
     defaultValues: {
@@ -97,11 +87,23 @@ const Index = () => {
   });
 
   const onEmailSubmit = async (data: z.infer<typeof emailSchema>) => {
+    if (!captchaToken) {
+      toast({
+        variant: "destructive",
+        title: "Captcha Required",
+        description: "Please complete the captcha verification.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Check if the email exists using our Edge Function
       const { data: checkResult, error: checkError } = await supabase.functions.invoke('check-user-exists', {
-        body: { email: data.email }
+        body: { 
+          email: data.email,
+          captchaToken
+        }
       });
 
       if (checkError) throw checkError;
@@ -113,7 +115,6 @@ const Index = () => {
           title: "Email not found",
           description: "This email is not registered in our system. Please check the email or contact support.",
         });
-        setIsLoading(false);
         return;
       }
 
@@ -121,20 +122,11 @@ const Index = () => {
       const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(data.email);
       if (supabaseError) throw supabaseError;
 
-      // Send verification email
-      const { error: verificationError } = await supabase.functions.invoke('send-verification', {
-        body: {
-          email: data.email,
-          verificationLink: `${window.location.origin}/verify?email=${encodeURIComponent(data.email)}`
-        }
-      });
-
-      if (verificationError) throw verificationError;
-      
       toast({
-        title: "Verification email sent",
-        description: "Please check your email and click the verification link to continue.",
+        title: "Password Reset Email Sent",
+        description: "Please check your email for the password reset link.",
       });
+      setStep(2);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -293,12 +285,18 @@ const Index = () => {
                     </FormItem>
                   )}
                 />
+                <div className="flex justify-center my-4">
+                  <ReCAPTCHA
+                    sitekey="YOUR_RECAPTCHA_SITE_KEY"
+                    onChange={(token) => setCaptchaToken(token)}
+                  />
+                </div>
                 <Button 
                   type="submit" 
                   className="w-full bg-blue-600 hover:bg-blue-700 transition-colors" 
-                  disabled={isLoading}
+                  disabled={isLoading || !captchaToken}
                 >
-                  {isLoading ? "Sending..." : "Send Verification Email"}
+                  {isLoading ? "Checking..." : "Check Email"}
                 </Button>
               </form>
             </Form>
