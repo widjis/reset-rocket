@@ -38,10 +38,13 @@ const securityQuestionSchema = z.object({
   customQuestion: z.string().optional(),
   answer: z.string().min(1, "Please provide an answer"),
 }).refine(data => {
-  return data.questionId !== undefined || (data.customQuestion !== undefined && data.customQuestion.length > 0);
+  if (data.questionId === 'custom') {
+    return data.customQuestion && data.customQuestion.length > 0;
+  }
+  return true;
 }, {
-  message: "Please select a question or provide a custom one",
-  path: ["questionId"],
+  message: "Please provide a custom question",
+  path: ["customQuestion"],
 });
 
 const passwordSchema = z.object({
@@ -220,26 +223,51 @@ const Index = () => {
   const onSecurityQuestionSubmit = async (data: z.infer<typeof securityQuestionSchema>) => {
     setIsLoading(true);
     try {
-      const question = data.questionId === 'custom' ? data.customQuestion : 
-        securityQuestions.find(q => q.id === data.questionId)?.question;
+      let questionId;
+      
+      if (data.questionId === 'custom' && data.customQuestion) {
+        // Insert the custom question first
+        const { data: questionData, error: questionError } = await supabase
+          .from('security_questions')
+          .insert([{ question: data.customQuestion }])
+          .select('id')
+          .single();
 
-      if (!question) {
-        throw new Error("Please select a security question or provide a custom one");
+        if (questionError) throw questionError;
+        questionId = questionData.id;
+      } else if (data.questionId && data.questionId !== 'custom') {
+        // Use existing question ID
+        const { data: existingQuestion, error: existingQuestionError } = await supabase
+          .from('security_questions')
+          .select('id')
+          .eq('id', data.questionId)
+          .single();
+
+        if (existingQuestionError) {
+          // If question doesn't exist, create it
+          const selectedQuestion = securityQuestions.find(q => q.id === data.questionId);
+          if (!selectedQuestion) throw new Error("Invalid question selected");
+
+          const { data: newQuestion, error: newQuestionError } = await supabase
+            .from('security_questions')
+            .insert([{ question: selectedQuestion.question }])
+            .select('id')
+            .single();
+
+          if (newQuestionError) throw newQuestionError;
+          questionId = newQuestion.id;
+        } else {
+          questionId = existingQuestion.id;
+        }
+      } else {
+        throw new Error("Invalid question selection");
       }
-
-      const { data: questionData, error: questionError } = await supabase
-        .from('security_questions')
-        .insert([{ question }])
-        .select('id')
-        .single();
-
-      if (questionError) throw questionError;
 
       const { error: answerError } = await supabase
         .from('user_security_answers')
         .insert([
           {
-            question_id: questionData.id,
+            question_id: questionId,
             answer: data.answer,
             user_id: (await supabase.auth.getUser()).data.user?.id,
             status: 'answered'
@@ -254,6 +282,7 @@ const Index = () => {
       });
       setStep(5);
     } catch (error: any) {
+      console.error('Error saving security question:', error);
       toast({
         variant: "destructive",
         title: "Error",
