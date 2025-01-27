@@ -171,9 +171,8 @@ const Index = () => {
       if (messageError) throw messageError;
 
       // Store OTP in state or context for verification
-      otpForm.setValue('otp', ''); // Reset OTP field
-      localStorage.setItem('expectedOtp', otp); // Store OTP for verification
-
+      localStorage.setItem('expectedOtp', otp);
+      
       toast({
         title: "OTP Sent",
         description: "Please check your WhatsApp for the OTP.",
