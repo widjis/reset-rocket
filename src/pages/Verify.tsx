@@ -21,6 +21,8 @@ const Verify = () => {
           throw new Error("Invalid verification link");
         }
 
+        console.log("Verifying token for email:", email);
+
         // Verify the token
         const { data: verificationData, error: verificationError } = await supabase
           .from("verification_tokens")
@@ -31,24 +33,33 @@ const Verify = () => {
           .gt("expires_at", new Date().toISOString())
           .single();
 
+        console.log("Verification data:", verificationData);
+        console.log("Verification error:", verificationError);
+
         if (verificationError || !verificationData) {
           throw new Error("Invalid or expired verification token");
         }
 
         // Mark token as used
-        await supabase
+        const { error: updateError } = await supabase
           .from("verification_tokens")
           .update({ used_at: new Date().toISOString() })
           .eq("id", verificationData.id);
 
+        if (updateError) {
+          console.error("Error updating token:", updateError);
+          throw new Error("Failed to process verification");
+        }
+
         // Redirect to the account recovery process with the verified email
-        navigate(`/?verified_email=${email}&step=${step}`);
+        navigate(`/?verified_email=${encodeURIComponent(email)}&step=${step}`);
         
         toast({
           title: "Email Verified",
           description: "Your email has been verified. You can now continue with the account recovery process.",
         });
       } catch (error: any) {
+        console.error("Verification error:", error);
         toast({
           variant: "destructive",
           title: "Verification Failed",
