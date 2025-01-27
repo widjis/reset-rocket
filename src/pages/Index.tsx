@@ -375,20 +375,19 @@ const Index = () => {
                       <FormControl>
                         <InputOTP
                           maxLength={6}
-                          value={field.value}
-                          onChange={field.onChange}
                           render={({ slots }) => (
-                            <InputOTPGroup className="gap-2">
+                            <InputOTPGroup className="gap-2 flex justify-center">
                               {slots.map((slot, index) => (
-                                <InputOTPSlot 
-                                  key={index} 
-                                  {...slot} 
-                                  index={index}
-                                  className="border-gray-300 focus:border-blue-500" 
+                                <InputOTPSlot
+                                  key={index}
+                                  {...slot}
+                                  className="w-10 h-12 text-center text-lg border-2 rounded-md focus:border-blue-500"
                                 />
                               ))}
                             </InputOTPGroup>
                           )}
+                          value={field.value}
+                          onChange={field.onChange}
                         />
                       </FormControl>
                       <FormMessage />
