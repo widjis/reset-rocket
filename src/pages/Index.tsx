@@ -381,6 +381,7 @@ const Index = () => {
                                 <InputOTPSlot
                                   key={index}
                                   {...slot}
+                                  index={index}
                                   className="w-10 h-12 text-center text-lg border-2 rounded-md focus:border-blue-500"
                                 />
                               ))}
