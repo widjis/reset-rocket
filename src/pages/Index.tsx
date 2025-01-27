@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -23,9 +24,24 @@ const otpSchema = z.object({
   otp: z.string().length(6, "Please enter a valid 6-digit OTP"),
 });
 
+const securityQuestions = [
+  { id: "1", question: "What is your mother's maiden name?" },
+  { id: "2", question: "What was the name of your first pet?" },
+  { id: "3", question: "In which city were you born?" },
+  { id: "4", question: "What was your childhood nickname?" },
+  { id: "5", question: "What is the name of your favorite childhood teacher?" },
+  { id: "custom", question: "Custom question" }
+];
+
 const securityQuestionSchema = z.object({
-  question: z.string().min(1, "Please select a security question"),
+  questionId: z.string().optional(),
+  customQuestion: z.string().optional(),
   answer: z.string().min(1, "Please provide an answer"),
+}).refine(data => {
+  return data.questionId !== undefined || (data.customQuestion !== undefined && data.customQuestion.length > 0);
+}, {
+  message: "Please select a question or provide a custom one",
+  path: ["questionId"],
 });
 
 const passwordSchema = z.object({
@@ -42,7 +58,6 @@ const Index = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Handle verified email redirect
   useEffect(() => {
     const verifiedEmail = searchParams.get("verified_email");
     const redirectStep = searchParams.get("step");
@@ -57,7 +72,6 @@ const Index = () => {
     }
   }, [searchParams]);
 
-  // Email form
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: {
@@ -72,7 +86,6 @@ const Index = () => {
     },
   });
 
-  // OTP form
   const otpForm = useForm<z.infer<typeof otpSchema>>({
     resolver: zodResolver(otpSchema),
     defaultValues: {
@@ -80,16 +93,15 @@ const Index = () => {
     },
   });
 
-  // Security question form
   const securityForm = useForm<z.infer<typeof securityQuestionSchema>>({
     resolver: zodResolver(securityQuestionSchema),
     defaultValues: {
-      question: "",
+      questionId: undefined,
+      customQuestion: "",
       answer: "",
     },
   });
 
-  // Password form
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
@@ -101,22 +113,16 @@ const Index = () => {
   const onEmailSubmit = async (data: z.infer<typeof emailSchema>) => {
     setIsLoading(true);
     try {
-      // Check if the email exists using our Edge Function
       const { data: checkResult, error: checkError } = await supabase.functions.invoke('check-user-exists', {
         body: { email: data.email }
       });
 
       if (checkError) throw checkError;
 
-      // If no user found with this email, send verification email
       if (!checkResult.exists) {
-        // Generate a random verification token
         const verificationToken = crypto.randomUUID();
-        
-        // Generate verification link with token
         const verificationLink = `${window.location.origin}/verify?email=${encodeURIComponent(data.email)}&token=${verificationToken}&step=2`;
         
-        // Send verification email using our Edge Function
         const { error: verificationError } = await supabase.functions.invoke('send-verification', {
           body: { 
             email: data.email,
@@ -134,7 +140,6 @@ const Index = () => {
         return;
       }
 
-      // If email exists, proceed with password reset
       const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(data.email);
       if (supabaseError) throw supabaseError;
 
@@ -157,10 +162,8 @@ const Index = () => {
   const onWhatsappSubmit = async (data: z.infer<typeof whatsappSchema>) => {
     setIsLoading(true);
     try {
-      // Generate a 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       
-      // Send OTP via WhatsApp
       const { error: messageError } = await supabase.functions.invoke('send-whatsapp', {
         body: {
           number: data.whatsapp,
@@ -170,7 +173,6 @@ const Index = () => {
 
       if (messageError) throw messageError;
 
-      // Store OTP in state or context for verification
       localStorage.setItem('expectedOtp', otp);
       
       toast({
@@ -195,7 +197,7 @@ const Index = () => {
       const expectedOtp = localStorage.getItem('expectedOtp');
       
       if (data.otp === expectedOtp) {
-        localStorage.removeItem('expectedOtp'); // Clean up
+        localStorage.removeItem('expectedOtp');
         toast({
           title: "OTP Verified",
           description: "OTP verification successful.",
@@ -218,18 +220,34 @@ const Index = () => {
   const onSecurityQuestionSubmit = async (data: z.infer<typeof securityQuestionSchema>) => {
     setIsLoading(true);
     try {
-      // Save security question answer
-      const { error } = await supabase
+      const question = data.questionId === 'custom' ? data.customQuestion : 
+        securityQuestions.find(q => q.id === data.questionId)?.question;
+
+      if (!question) {
+        throw new Error("Please select a security question or provide a custom one");
+      }
+
+      const { data: questionData, error: questionError } = await supabase
+        .from('security_questions')
+        .insert([{ question }])
+        .select('id')
+        .single();
+
+      if (questionError) throw questionError;
+
+      const { error: answerError } = await supabase
         .from('user_security_answers')
         .insert([
           {
-            question_id: data.question,
+            question_id: questionData.id,
             answer: data.answer,
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+            status: 'answered'
           }
         ]);
-      
-      if (error) throw error;
-      
+
+      if (answerError) throw answerError;
+
       toast({
         title: "Security Question Saved",
         description: "Your security question has been saved successfully.",
@@ -259,7 +277,6 @@ const Index = () => {
         title: "Password Updated",
         description: "Your password has been updated successfully.",
       });
-      // Reset all forms and go back to step 1
       setStep(1);
     } catch (error: any) {
       toast({
@@ -427,17 +444,45 @@ const Index = () => {
               <form onSubmit={securityForm.handleSubmit(onSecurityQuestionSubmit)} className="space-y-4">
                 <FormField
                   control={securityForm.control}
-                  name="question"
+                  name="questionId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Security Question</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your security question" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a security question" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {securityQuestions.map((q) => (
+                            <SelectItem key={q.id} value={q.id}>
+                              {q.question}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {securityForm.watch("questionId") === "custom" && (
+                  <FormField
+                    control={securityForm.control}
+                    name="customQuestion"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom Question</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter your custom security question" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 <FormField
                   control={securityForm.control}
                   name="answer"
@@ -451,7 +496,12 @@ const Index = () => {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 transition-colors"
+                  disabled={isLoading}
+                >
                   {isLoading ? "Saving..." : "Save Security Question"}
                 </Button>
               </form>
