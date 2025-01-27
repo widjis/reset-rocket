@@ -21,7 +21,7 @@ const Verify = () => {
           throw new Error("Invalid verification link");
         }
 
-        console.log("Verifying token for email:", email);
+        console.log("Starting verification for:", { email, token, step });
 
         // Verify the token
         const { data: verificationData, error: verificationError } = await supabase
@@ -33,10 +33,10 @@ const Verify = () => {
           .gt("expires_at", new Date().toISOString())
           .single();
 
-        console.log("Verification data:", verificationData);
-        console.log("Verification error:", verificationError);
+        console.log("Verification check result:", { verificationData, verificationError });
 
         if (verificationError || !verificationData) {
+          console.error("Verification failed:", verificationError);
           throw new Error("Invalid or expired verification token");
         }
 
@@ -51,8 +51,10 @@ const Verify = () => {
           throw new Error("Failed to process verification");
         }
 
-        // Redirect to the account recovery process with the verified email
-        navigate(`/?verified_email=${encodeURIComponent(email)}&step=${step}`);
+        // Redirect with verified email
+        const redirectUrl = `/?verified_email=${encodeURIComponent(email)}&step=${step}`;
+        console.log("Redirecting to:", redirectUrl);
+        navigate(redirectUrl);
         
         toast({
           title: "Email Verified",
@@ -65,7 +67,8 @@ const Verify = () => {
           title: "Verification Failed",
           description: error.message,
         });
-        navigate("/");
+        // Redirect to home page after a short delay
+        setTimeout(() => navigate("/"), 2000);
       } finally {
         setIsVerifying(false);
       }
