@@ -372,23 +372,40 @@ const Index = () => {
                     <FormItem>
                       <FormLabel className="text-gray-700">Enter OTP</FormLabel>
                       <FormControl>
-                        <InputOTP
-                          maxLength={6}
-                          value={field.value}
-                          onChange={field.onChange}
-                          render={({ slots }) => (
-                            <InputOTPGroup className="gap-2 justify-center">
-                              {slots.map((slot, idx) => (
-                                <InputOTPSlot
-                                  key={idx}
-                                  {...slot}
-                                  index={idx}
-                                  className="w-10 h-12 text-center text-lg border-2 rounded-md focus:border-blue-500"
-                                />
-                              ))}
-                            </InputOTPGroup>
-                          )}
-                        />
+                        <div className="space-y-4">
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={6}
+                            placeholder="Enter 6-digit OTP"
+                            className="text-center text-lg"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9]/g, '');
+                              if (value.length <= 6) {
+                                field.onChange(value);
+                              }
+                            }}
+                          />
+                          <InputOTP
+                            maxLength={6}
+                            value={field.value}
+                            onChange={field.onChange}
+                            render={({ slots }) => (
+                              <InputOTPGroup className="gap-2 justify-center">
+                                {slots.map((slot, idx) => (
+                                  <InputOTPSlot
+                                    key={idx}
+                                    {...slot}
+                                    index={idx}
+                                    className="w-10 h-12 text-center text-lg border-2 rounded-md focus:border-blue-500"
+                                  />
+                                ))}
+                              </InputOTPGroup>
+                            )}
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
