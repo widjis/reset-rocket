@@ -171,8 +171,8 @@ const Index = () => {
       if (messageError) throw messageError;
 
       // Store OTP in state or context for verification
-      // You might want to implement a more secure way to handle this
-      otpForm.setValue('otp', otp);
+      otpForm.setValue('otp', ''); // Reset OTP field
+      localStorage.setItem('expectedOtp', otp); // Store OTP for verification
 
       toast({
         title: "OTP Sent",
@@ -193,13 +193,18 @@ const Index = () => {
   const onOTPSubmit = async (data: z.infer<typeof otpSchema>) => {
     setIsLoading(true);
     try {
-      // Here we would verify the OTP
-      // For now, we'll simulate verification
-      toast({
-        title: "OTP Verified",
-        description: "OTP verification successful.",
-      });
-      setStep(4);
+      const expectedOtp = localStorage.getItem('expectedOtp');
+      
+      if (data.otp === expectedOtp) {
+        localStorage.removeItem('expectedOtp'); // Clean up
+        toast({
+          title: "OTP Verified",
+          description: "OTP verification successful.",
+        });
+        setStep(4);
+      } else {
+        throw new Error('Invalid OTP. Please try again.');
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -370,6 +375,8 @@ const Index = () => {
                       <FormControl>
                         <InputOTP
                           maxLength={6}
+                          value={field.value}
+                          onChange={field.onChange}
                           render={({ slots }) => (
                             <InputOTPGroup className="gap-2">
                               {slots.map((slot, index) => (
@@ -382,7 +389,6 @@ const Index = () => {
                               ))}
                             </InputOTPGroup>
                           )}
-                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
