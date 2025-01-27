@@ -157,8 +157,23 @@ const Index = () => {
   const onWhatsappSubmit = async (data: z.infer<typeof whatsappSchema>) => {
     setIsLoading(true);
     try {
-      // Here we would integrate with a WhatsApp API service
-      // For now, we'll simulate sending an OTP
+      // Generate a 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Send OTP via WhatsApp
+      const { error: messageError } = await supabase.functions.invoke('send-whatsapp', {
+        body: {
+          number: data.whatsapp,
+          message: `Your MTI verification code is: ${otp}`
+        }
+      });
+
+      if (messageError) throw messageError;
+
+      // Store OTP in state or context for verification
+      // You might want to implement a more secure way to handle this
+      otpForm.setValue('otp', otp);
+
       toast({
         title: "OTP Sent",
         description: "Please check your WhatsApp for the OTP.",
